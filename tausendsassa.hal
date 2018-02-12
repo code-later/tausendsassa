@@ -1,0 +1,42 @@
+(Class new 'Tausendsassa
+  attributes ["app"]
+  methods @[
+    "app" { |'self| (self @ "app" else @[]) }
+    "not_found" { |'self|
+      ["GET /404" { |'params 'env| [404 @["ContentType" "text/plain"] ["Not found!"]] }]
+    }
+    "call" { |'self 'env|
+      ('http_method = (env @ "request_method" else false))
+
+      ('path = (env @ "path" else "/"))
+
+      ('routing_key = ((http_method + " ") + path))
+
+      (['path_spec 'callable] = ((self app) find { |'element|
+                  (['path_spec 'callable] = element)
+
+                  ('regexp_template = (path_spec replace (Regexp from ":([^\/]*)") with "(?<\1>[^\/]*)"))
+
+                  ('regexp = (Regexp from (("\A" + regexp_template) + "\z")))
+
+                  ('match = (((http_method + " ") + path) match regexp))
+
+                  ((match @ 0 else false) to_b)
+                } else (self not_found)))
+
+      ('regexp_template = (path_spec replace (Regexp from ":([^\/]*)") with "(?<\1>[^\/]*)"))
+
+      ('regexp = (Regexp from regexp_template))
+
+      ('match = (((http_method + " ") + path) match regexp))
+
+      ('query_parts = ((env @ "query" else "") scan (Regexp from "([^=&]+)=([^&]+)?")))
+      ('query_params = (Dictionary from query_parts))
+
+      (callable call [(match merge query_params) env])
+    }
+  ]
+  class_methods @[
+    "with" { |'self 'app| (self new @["app" app]) }
+  ]
+)
